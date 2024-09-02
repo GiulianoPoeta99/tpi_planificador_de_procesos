@@ -3,9 +3,10 @@ from src.models.process import Process, ProcessState
 
 class Priority(Scheduler):
     def run(self):
-        while self.processes or self.ready_queue or self.current_process:
+        while self.processes or self.ready_queue or self.blocked_queue or self.current_process:
             self.check_process_arrivals()
             self.check_process_completion()
+            self.check_io_completion()
             self.schedule_next_process()
             self.update_waiting_times()
             self.current_time += 1
@@ -21,8 +22,12 @@ class Priority(Scheduler):
         if self.current_process:
             self.current_process.remaining_cpu_time -= 1
             if self.current_process.remaining_cpu_time == 0:
-                self.current_process.state = ProcessState.TERMINATED
-                self.current_process.turnaround_time = self.current_time - self.current_process.arrival_time + 1
+                if self.current_process.cpu_bursts > 1:
+                    self.current_process.cpu_bursts -= 1
+                    self.move_to_io(self.current_process)
+                else:
+                    self.current_process.state = ProcessState.TERMINATED
+                    self.current_process.turnaround_time = self.current_time - self.current_process.arrival_time + 1
                 self.current_process = None
 
     def schedule_next_process(self):
@@ -36,7 +41,3 @@ class Priority(Scheduler):
             self.current_process = self.ready_queue.pop(0)
             self.current_process.state = ProcessState.RUNNING
             self.ready_queue.sort(key=lambda p: p.priority, reverse=True)
-
-    def update_waiting_times(self):
-        for process in self.ready_queue:
-            process.waiting_time += 1

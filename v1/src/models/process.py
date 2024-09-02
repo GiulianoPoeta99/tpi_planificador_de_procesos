@@ -11,5 +11,6 @@ class Process:
     priority: int
     state: ProcessState = ProcessState.NEW
     remaining_cpu_time: int = 0
+    remaining_io_time: int = 0
     turnaround_time: int = 0
     waiting_time: int = 0
