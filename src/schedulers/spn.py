@@ -1,7 +1,7 @@
 from src.schedulers.base_scheduler import Scheduler
 from src.models.process import Process, ProcessState
 
-class FCFS(Scheduler):
+class SPN(Scheduler):
     def run(self):
         while self.processes or self.ready_queue or self.current_process:
             self.check_process_arrivals()
@@ -15,6 +15,7 @@ class FCFS(Scheduler):
             process = self.processes.pop(0)
             process.state = ProcessState.READY
             self.ready_queue.append(process)
+        self.ready_queue.sort(key=lambda p: p.cpu_burst_duration * p.cpu_bursts)
 
     def check_process_completion(self):
         if self.current_process:

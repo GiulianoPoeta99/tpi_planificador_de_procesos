@@ -1,2 +1,2 @@
-from .state_process import StateProcess
+from .process_state import ProcessState
 from .process import Process

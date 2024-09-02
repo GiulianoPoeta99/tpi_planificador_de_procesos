@@ -1,12 +1,12 @@
-from ..models import Process
 from typing import List
+from src.models.process import Process
 
-class BaseScheduler:
-    def __init__(self, procesos: List[Process]):
-        self.procesos = procesos
-        self.tiempo_actual = 0
-        self.cola_listos: List[Process] = []
-        self.proceso_actual: Process = None
+class Scheduler:
+    def __init__(self, processes: List[Process]):
+        self.processes = processes
+        self.current_time = 0
+        self.ready_queue: List[Process] = []
+        self.current_process: Process = None
 
-    def ejecutar(self):
-        raise NotImplementedError("Método ejecutar debe ser implementado en las subclases")
+    def run(self):
+        raise NotImplementedError("The run method must be implemented in subclasses")

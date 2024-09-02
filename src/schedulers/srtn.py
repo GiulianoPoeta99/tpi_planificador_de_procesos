@@ -1,7 +1,7 @@
 from src.schedulers.base_scheduler import Scheduler
 from src.models.process import Process, ProcessState
 
-class FCFS(Scheduler):
+class SRTN(Scheduler):
     def run(self):
         while self.processes or self.ready_queue or self.current_process:
             self.check_process_arrivals()
@@ -15,6 +15,7 @@ class FCFS(Scheduler):
             process = self.processes.pop(0)
             process.state = ProcessState.READY
             self.ready_queue.append(process)
+        self.ready_queue.sort(key=lambda p: p.remaining_cpu_time)
 
     def check_process_completion(self):
         if self.current_process:
@@ -25,9 +26,14 @@ class FCFS(Scheduler):
                 self.current_process = None
 
     def schedule_next_process(self):
-        if not self.current_process and self.ready_queue:
-            self.current_process = self.ready_queue.pop(0)
-            self.current_process.state = ProcessState.RUNNING
+        if self.ready_queue:
+            shortest_process = min(self.ready_queue, key=lambda p: p.remaining_cpu_time)
+            if not self.current_process or shortest_process.remaining_cpu_time < self.current_process.remaining_cpu_time:
+                if self.current_process:
+                    self.ready_queue.append(self.current_process)
+                    self.current_process.state = ProcessState.READY
+                self.current_process = self.ready_queue.pop(self.ready_queue.index(shortest_process))
+                self.current_process.state = ProcessState.RUNNING
 
     def update_waiting_times(self):
         for process in self.ready_queue:

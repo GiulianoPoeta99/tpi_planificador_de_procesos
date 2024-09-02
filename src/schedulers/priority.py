@@ -1,7 +1,7 @@
 from src.schedulers.base_scheduler import Scheduler
 from src.models.process import Process, ProcessState
 
-class FCFS(Scheduler):
+class Priority(Scheduler):
     def run(self):
         while self.processes or self.ready_queue or self.current_process:
             self.check_process_arrivals()
@@ -15,6 +15,7 @@ class FCFS(Scheduler):
             process = self.processes.pop(0)
             process.state = ProcessState.READY
             self.ready_queue.append(process)
+        self.ready_queue.sort(key=lambda p: p.priority, reverse=True)
 
     def check_process_completion(self):
         if self.current_process:
@@ -28,6 +29,13 @@ class FCFS(Scheduler):
         if not self.current_process and self.ready_queue:
             self.current_process = self.ready_queue.pop(0)
             self.current_process.state = ProcessState.RUNNING
+        elif self.current_process and self.ready_queue and self.ready_queue[0].priority > self.current_process.priority:
+            # Preempt the current process
+            self.ready_queue.append(self.current_process)
+            self.current_process.state = ProcessState.READY
+            self.current_process = self.ready_queue.pop(0)
+            self.current_process.state = ProcessState.RUNNING
+            self.ready_queue.sort(key=lambda p: p.priority, reverse=True)
 
     def update_waiting_times(self):
         for process in self.ready_queue:
