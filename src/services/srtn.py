@@ -1,9 +1,9 @@
 from typing import List
-from interfaces import PlanificadorDeProcesos, ProcesoEnEjecucion, ProcesoFinalizado, ResultadoPlanificador, Proceso, EstadoSistema
-from executors.ejecutor_base import EjecutorProcesosStrategy
-from common import ejecutar_un_tick_cpu, ejecutar_un_tick_idle, ejecutar_un_tick_io, ejecutar_un_tick_tcp, ejecutar_un_tick_tfp, ejecutar_un_tick_tip
+from interfaces import PlanificadorDeProcesos, ProcesoEnEjecucion, ProcesoFinalizado, ResultadoPlanificador, Proceso
+from planificador_de_procesos.v2.src.executors.base import EjecutorProcesosStrategy
+from planificador_de_procesos.v2.src.system_executor import ejecutar_un_tick_cpu, ejecutar_un_tick_idle, ejecutar_un_tick_io, ejecutar_un_tick_tcp, ejecutar_un_tick_tfp, ejecutar_un_tick_tip
 
-class EjecutorPE(EjecutorProcesosStrategy):
+class EjecutorSRTN(EjecutorProcesosStrategy):
     def __init__(self, planificador: PlanificadorDeProcesos):
         super().__init__(planificador)
         self.unidad_de_tiempo = 0
@@ -18,9 +18,8 @@ class EjecutorPE(EjecutorProcesosStrategy):
             tiempo_cpu_desocupada=0,
             tiempo_cpu_con_so=0
         )
-        self.actualizar_cola_bloqueados_por_io()
         self.actualizar_cola_listos()
-        self.ordenar_cola_listos()
+        self.actualizar_cola_bloqueados_por_io()
 
     def avanzar_una_unidad_de_tiempo(self):
         self.unidad_de_tiempo += 1
@@ -39,7 +38,7 @@ class EjecutorPE(EjecutorProcesosStrategy):
                 ))
 
     def ordenar_cola_listos(self):
-        self.cola_listos.sort(key=lambda proceso: proceso.prioridad, reverse=True)
+        self.cola_listos.sort(key=lambda proceso: proceso.rafaga_cpu_pendiente_en_ejecucion)
 
     def actualizar_cola_bloqueados_por_io(self):
         procesos_bloqueados_revisados = 0
