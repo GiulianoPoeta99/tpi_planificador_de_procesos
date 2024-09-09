@@ -1,127 +1,113 @@
-from typing import List
-from interfaces import PlanificadorDeProcesos, ProcesoEnEjecucion, ProcesoFinalizado, ResultadoPlanificador, Proceso, EstadoSistema
-from planificador_de_procesos.v2.src.executors.base import EjecutorProcesosStrategy
-from planificador_de_procesos.v2.src.system_executor import ejecutar_un_tick_cpu, ejecutar_un_tick_idle, ejecutar_un_tick_io, ejecutar_un_tick_tcp, ejecutar_un_tick_tfp, ejecutar_un_tick_tip
+from models import ProcessScheduler, RunningProcess, FinishedProcess, SchedulerResult
+from .base import BasePolicy
 
-class EjecutorSPN(EjecutorProcesosStrategy):
-    def __init__(self, planificador: PlanificadorDeProcesos):
-        super().__init__(planificador)
-        self.unidad_de_tiempo = 0
-        self.cola_listos: List[ProcesoEnEjecucion] = []
-        self.cola_bloqueados_por_io: List[ProcesoEnEjecucion] = []
-        self.ultimo_proceso_ejecutado_id = -1
-        self.resultado = ResultadoPlanificador(
-            historial_estados=[],
-            procesos_finalizados=[],
-            tiempo_retorno_tanda=0,
-            tiempo_medio_retorno_tanda=0,
-            tiempo_cpu_desocupada=0,
-            tiempo_cpu_con_so=0
-        )
-        self.actualizar_cola_listos()
-        self.actualizar_cola_bloqueados_por_io()
-        self.ordenar_cola_listos()
+class SPN(BasePolicy):
+    def __init__(self, scheduler: ProcessScheduler):
+        super().__init__(scheduler)
+        self.sort_ready_queue()
 
-    def avanzar_una_unidad_de_tiempo(self):
-        self.unidad_de_tiempo += 1
-
-    def actualizar_cola_listos(self):
-        for proceso in self.planificador.procesos:
-            if proceso.tiempo_de_arribo == self.unidad_de_tiempo:
-                self.cola_listos.append(ProcesoEnEjecucion(
-                    **proceso.__dict__,
-                    ya_ejecuto_su_tip=self.planificador.tip == 0,
-                    rafaga_cpu_pendiente_en_ejecucion=proceso.duracion_rafaga_cpu,
-                    rafaga_io_pendiente_en_ejecucion=proceso.duracion_rafaga_io,
-                    tiempo_servicio=0,
-                    tiempo_espera_listo=0,
-                    cantidad_de_rafagas_cpu=proceso.cantidad_de_rafagas_cpu - 1 if proceso.cantidad_de_rafagas_cpu > 0 else 0
+    def update_ready_queue(self):
+        for process in self.scheduler.processes:
+            if process.arrival_time == self.time_unit:
+                self.ready_queue.append(RunningProcess(
+                    id=process.id,
+                    name=process.name,
+                    arrival_time=process.arrival_time,
+                    cpu_burst_duration=process.cpu_burst_duration,
+                    io_burst_duration=process.io_burst_duration,
+                    priority=process.priority,
+                    tip_already_executed=self.scheduler.tip == 0,
+                    pending_cpu_burst_in_execution=process.cpu_burst_duration,
+                    pending_io_burst_in_execution=process.io_burst_duration,
+                    service_time=0,
+                    ready_wait_time=0,
+                    cpu_burst_count=process.cpu_burst_count - 1 if process.cpu_burst_count > 0 else 0,
+                    io_burst_count=process.io_burst_count
                 ))
 
-    def ordenar_cola_listos(self):
-        self.cola_listos.sort(key=lambda x: x.rafaga_cpu_pendiente_en_ejecucion)
+    def sort_ready_queue(self):
+        self.ready_queue.sort(key=lambda x: x.pending_cpu_burst_in_execution)
 
-    def actualizar_cola_bloqueados_por_io(self):
-        procesos_bloqueados_revisados = 0
-        while procesos_bloqueados_revisados < len(self.cola_bloqueados_por_io):
-            proceso = self.cola_bloqueados_por_io[procesos_bloqueados_revisados]
-            if proceso.rafaga_io_pendiente_en_ejecucion > 0:
-                ejecutar_un_tick_io(proceso, self.resultado.historial_estados, self.unidad_de_tiempo)
+    def execute_context_switch(self, process: RunningProcess):
+        for _ in range(self.scheduler.tcp):
+            self.system_executor.execute_tcp_tick(process, self.time_unit)
+            self.result.os_cpu_time += 1
+            self.advance_time_unit()
+            self.update_io_blocked_queue()
+            self.update_ready_queue()
+        self.last_executed_process_id = process.id
+        self.sort_ready_queue()
 
-            if proceso.rafaga_io_pendiente_en_ejecucion == 0:
-                if proceso.cantidad_de_rafagas_io > 0:
-                    proceso.cantidad_de_rafagas_io -= 1
-                    proceso.rafaga_io_pendiente_en_ejecucion = proceso.duracion_rafaga_io
+    def execute_tip(self, process: RunningProcess):
+        for _ in range(self.scheduler.tip):
+            self.system_executor.execute_tip_tick(process, self.time_unit)
+            self.result.os_cpu_time += 1
+            self.advance_time_unit()
+            self.update_io_blocked_queue()
+            self.update_ready_queue()
+        process.tip_already_executed = True
+        self.last_executed_process_id = process.id
+        self.sort_ready_queue()
 
-                self.cola_listos.append(proceso)
-                self.cola_bloqueados_por_io.pop(procesos_bloqueados_revisados)
+    def execute_process(self, process: RunningProcess):
+        if process.pending_cpu_burst_in_execution > 0:
+            self.system_executor.execute_cpu_tick(process, self.time_unit)
+            process.service_time += 1
+            for i in range(1, len(self.ready_queue)):
+                self.ready_queue[i].ready_wait_time += 1
+            self.last_executed_process_id = process.id
+            self.advance_time_unit()
+            self.update_io_blocked_queue()
+            self.update_ready_queue()
+
+        if process.pending_cpu_burst_in_execution == 0:
+            if process.cpu_burst_count > 0:
+                process.cpu_burst_count -= 1
+                process.pending_cpu_burst_in_execution = process.cpu_burst_duration
+                self.io_blocked_queue.append(process)
+                self.ready_queue.pop(0)
+            elif process.cpu_burst_count == 0:
+                self.execute_tfp(process)
+                self.finish_process(process)
+        self.sort_ready_queue()
+
+    def execute_tfp(self, process: RunningProcess):
+        for _ in range(self.scheduler.tfp):
+            self.system_executor.execute_tfp_tick(process, self.time_unit)
+            self.result.os_cpu_time += 1
+            self.advance_time_unit()
+            self.update_io_blocked_queue()
+            self.update_ready_queue()
+
+    def finish_process(self, process: RunningProcess):
+        self.result.finished_processes.append(FinishedProcess(
+            **process.__dict__,
+            return_instant=self.time_unit,
+            return_time=self.time_unit - process.arrival_time,
+            normalized_return_time=(self.time_unit - process.arrival_time) / process.service_time
+        ))
+        self.ready_queue.pop(0)
+
+    def execute(self) -> SchedulerResult:
+        while len(self.result.finished_processes) < len(self.scheduler.processes):
+            if len(self.ready_queue) == 0:
+                self.system_executor.execute_idle_tick(self.time_unit)
+                self.result.idle_cpu_time += 1
+                self.advance_time_unit()
+                self.update_io_blocked_queue()
+                self.update_ready_queue()
+                self.sort_ready_queue()
             else:
-                procesos_bloqueados_revisados += 1
-
-    def ejecutar(self) -> ResultadoPlanificador:
-        while len(self.resultado.procesos_finalizados) < len(self.planificador.procesos):
-            if len(self.cola_listos) == 0:
-                ejecutar_un_tick_idle(self.resultado.historial_estados, self.unidad_de_tiempo)
-                self.resultado.tiempo_cpu_desocupada += 1
-                self.avanzar_una_unidad_de_tiempo()
-                self.actualizar_cola_bloqueados_por_io()
-                self.actualizar_cola_listos()
-                self.ordenar_cola_listos()
-            else:
-                proceso_actual = self.cola_listos[0]
-                if self.ultimo_proceso_ejecutado_id != proceso_actual.id and self.ultimo_proceso_ejecutado_id != -1 and proceso_actual.ya_ejecuto_su_tip:
-                    for _ in range(self.planificador.tcp):
-                        ejecutar_un_tick_tcp(proceso_actual, self.resultado.historial_estados, self.unidad_de_tiempo)
-                        self.resultado.tiempo_cpu_con_so += 1
-                        self.avanzar_una_unidad_de_tiempo()
-                        self.actualizar_cola_bloqueados_por_io()
-                        self.actualizar_cola_listos()
-                    self.ultimo_proceso_ejecutado_id = proceso_actual.id
-                    self.ordenar_cola_listos()
-                elif self.ultimo_proceso_ejecutado_id != proceso_actual.id and not proceso_actual.ya_ejecuto_su_tip:
-                    for _ in range(self.planificador.tip):
-                        ejecutar_un_tick_tip(proceso_actual, self.resultado.historial_estados, self.unidad_de_tiempo)
-                        self.resultado.tiempo_cpu_con_so += 1
-                        self.avanzar_una_unidad_de_tiempo()
-                        self.actualizar_cola_bloqueados_por_io()
-                        self.actualizar_cola_listos()
-                    proceso_actual.ya_ejecuto_su_tip = True
-                    self.ultimo_proceso_ejecutado_id = proceso_actual.id
-                    self.ordenar_cola_listos()
+                current_process = self.ready_queue[0]
+                if self.last_executed_process_id != current_process.id and self.last_executed_process_id != -1 and current_process.tip_already_executed:
+                    self.execute_context_switch(current_process)
+                elif self.last_executed_process_id != current_process.id and not current_process.tip_already_executed:
+                    self.execute_tip(current_process)
                 else:
-                    if proceso_actual.rafaga_cpu_pendiente_en_ejecucion > 0:
-                        ejecutar_un_tick_cpu(proceso_actual, self.resultado.historial_estados, self.unidad_de_tiempo)
-                        proceso_actual.tiempo_servicio += 1
-                        for i in range(1, len(self.cola_listos)):
-                            self.cola_listos[i].tiempo_espera_listo += 1
-                        self.ultimo_proceso_ejecutado_id = proceso_actual.id
-                        self.avanzar_una_unidad_de_tiempo()
-                        self.actualizar_cola_bloqueados_por_io()
-                        self.actualizar_cola_listos()
+                    self.execute_process(current_process)
 
-                    if proceso_actual.rafaga_cpu_pendiente_en_ejecucion == 0 and proceso_actual.cantidad_de_rafagas_cpu > 0:
-                        proceso_actual.cantidad_de_rafagas_cpu -= 1
-                        proceso_actual.rafaga_cpu_pendiente_en_ejecucion = proceso_actual.duracion_rafaga_cpu
-                        self.cola_bloqueados_por_io.append(proceso_actual)
-                        self.cola_listos.pop(0)
-                    elif proceso_actual.rafaga_cpu_pendiente_en_ejecucion == 0 and proceso_actual.cantidad_de_rafagas_cpu == 0:
-                        for _ in range(self.planificador.tfp):
-                            ejecutar_un_tick_tfp(proceso_actual, self.resultado.historial_estados, self.unidad_de_tiempo)
-                            self.resultado.tiempo_cpu_con_so += 1
-                            self.avanzar_una_unidad_de_tiempo()
-                            self.actualizar_cola_bloqueados_por_io()
-                            self.actualizar_cola_listos()
-
-                        self.resultado.procesos_finalizados.append(ProcesoFinalizado(
-                            **proceso_actual.__dict__,
-                            instante_retorno=self.unidad_de_tiempo,
-                            tiempo_retorno=self.unidad_de_tiempo - proceso_actual.tiempo_de_arribo,
-                            tiempo_retorno_normalizado=(self.unidad_de_tiempo - proceso_actual.tiempo_de_arribo) / proceso_actual.tiempo_servicio
-                        ))
-                        self.cola_listos.pop(0)
-                    self.ordenar_cola_listos()
-
-        self.resultado.procesos_finalizados.sort(key=lambda x: x.id)
-        self.resultado.tiempo_retorno_tanda = self.unidad_de_tiempo
-        self.resultado.tiempo_medio_retorno_tanda = sum(p.tiempo_retorno for p in self.resultado.procesos_finalizados) / len(self.resultado.procesos_finalizados)
-        return self.resultado
+        self.result.finished_processes.sort(key=lambda x: x.id)
+        self.result.batch_return_time = self.time_unit
+        self.result.average_batch_return_time = sum(p.return_time for p in self.result.finished_processes) / len(self.result.finished_processes)
+        self.result.state_history = self.system_executor.get_history()
+        return self.result

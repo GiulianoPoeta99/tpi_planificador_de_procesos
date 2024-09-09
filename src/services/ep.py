@@ -1,8 +1,11 @@
-from typing import List
-from models import RunningProcess, FinishedProcess, SchedulerResult
+from models import ProcessScheduler, RunningProcess, FinishedProcess, SchedulerResult
 from .base import BasePolicy
 
-class FCFS(BasePolicy):
+class ExternalPriority(BasePolicy):
+    def __init__(self, scheduler: ProcessScheduler):
+        super().__init__(scheduler)
+        self.sort_ready_queue()
+
     def update_ready_queue(self):
         for process in self.scheduler.processes:
             if process.arrival_time == self.time_unit:
@@ -22,6 +25,9 @@ class FCFS(BasePolicy):
                     io_burst_count=process.io_burst_count
                 ))
 
+    def sort_ready_queue(self):
+        self.ready_queue.sort(key=lambda process: process.priority, reverse=True)
+
     def execute_context_switch(self, process: RunningProcess):
         for _ in range(self.scheduler.tcp):
             self.system_executor.execute_tcp_tick(process, self.time_unit)
@@ -29,6 +35,7 @@ class FCFS(BasePolicy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+        self.sort_ready_queue()
 
     def execute_tip(self, process: RunningProcess):
         for _ in range(self.scheduler.tip):
@@ -37,6 +44,7 @@ class FCFS(BasePolicy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+        self.sort_ready_queue()
 
     def execute_tfp(self, process: RunningProcess):
         for _ in range(self.scheduler.tfp):
@@ -45,6 +53,7 @@ class FCFS(BasePolicy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+        self.sort_ready_queue()
 
     def execute_process(self, process: RunningProcess):
         if process.pending_cpu_burst_in_execution > 0:
@@ -66,6 +75,7 @@ class FCFS(BasePolicy):
             elif process.cpu_burst_count == 0:
                 self.execute_tfp(process)
                 self.finish_process(process)
+        self.sort_ready_queue()
 
     def finish_process(self, process: RunningProcess):
         self.result.finished_processes.append(FinishedProcess(
@@ -84,6 +94,7 @@ class FCFS(BasePolicy):
                 self.advance_time_unit()
                 self.update_io_blocked_queue()
                 self.update_ready_queue()
+                self.sort_ready_queue()
             else:
                 current_process = self.ready_queue[0]
                 if self.last_executed_process_id != current_process.id and self.last_executed_process_id != -1 and current_process.tip_already_executed:

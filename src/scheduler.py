@@ -1,7 +1,7 @@
 from typing import List
 import csv
-from models import ProcessScheduler, SchedulerResult, Process
-from services import FCFS, RoundRobin#, EjecutorPE, EjecutorSPN, EjecutorSRTN
+from models import ProcessScheduler, Process
+from services import FCFS, RoundRobin, ExternalPriority, SPN, SRTN
 from enums import Policy
 
 class Scheduler:
@@ -9,9 +9,9 @@ class Scheduler:
         self.executors = {
             Policy.FCFS: FCFS,
             Policy.RR: RoundRobin,
-            # Policy.SPN: EjecutorSPN,
-            # Policy.SRTN: EjecutorSRTN,
-            # Policy.PE: EjecutorPE
+            Policy.EP: ExternalPriority,
+            Policy.SPN: SPN,
+            Policy.SRTN: SRTN,
         }
 
     @staticmethod
@@ -21,7 +21,6 @@ class Scheduler:
             with open(file_path, mode='r') as file:
                 reader = csv.reader(file)
                 for row in reader:
-                    # Asegúrate de que cada fila tenga la longitud correcta
                     if len(row) != 8:
                         print(f"Error: La fila {row} no tiene el formato esperado.")
                         continue
@@ -57,4 +56,4 @@ class Scheduler:
         print('\n')
         print('===========================Resultado===============================')
         print(executor_process.execute())
-        print('===================================================================')
+        print('\n===================================================================')
