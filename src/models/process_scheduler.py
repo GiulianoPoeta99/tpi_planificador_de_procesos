@@ -13,10 +13,9 @@ class ProcessScheduler:
     quantum: int
 
     def __str__(self) -> str:
-        return f"""Parameters:
-  Policy: {self.policy.value}
-  Number of Processes: {len(self.processes)}
-  TIP: {self.tip}
-  TFP: {self.tfp}
-  TCP: {self.tcp}
-  Quantum: {self.quantum}"""
+        return f"""  * Policy: {self.policy.value}
+  * Number of Processes: {len(self.processes)}
+  * TIP: {self.tip}
+  * TFP: {self.tfp}
+  * TCP: {self.tcp}
+  * Quantum: {self.quantum}"""

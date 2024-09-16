@@ -1,15 +1,16 @@
 from models import ProcessScheduler, RunningProcess, FinishedProcess, SchedulerResult
 from .policy_strategy import PolicyStrategy
+from tools.logger import CustomLogger
 
 class RoundRobin(PolicyStrategy):
-    def __init__(self, scheduler: ProcessScheduler):
-        super().__init__(scheduler)
+    def __init__(self, scheduler: ProcessScheduler, logger: CustomLogger):
+        super().__init__(scheduler, logger)
         self.quantum_counter = 1
 
     def update_ready_queue(self):
         for process in self.scheduler.processes:
             if process.arrival_time == self.time_unit:
-                self.ready_queue.append(RunningProcess(
+                new_process = RunningProcess(
                     id=process.id,
                     name=process.name,
                     arrival_time=process.arrival_time,
@@ -23,7 +24,9 @@ class RoundRobin(PolicyStrategy):
                     ready_wait_time=0,
                     cpu_burst_count=process.cpu_burst_count - 1 if process.cpu_burst_count > 0 else 0,
                     io_burst_count=process.io_burst_count
-                ))
+                )
+                self.ready_queue.append(new_process)
+                self.logger.log_process_state(self.time_unit, f"Process {new_process.id} arrived and added to Ready Queue")
 
     def execute_context_switch(self, process: RunningProcess):
         for _ in range(self.scheduler.tcp):
@@ -32,6 +35,7 @@ class RoundRobin(PolicyStrategy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+            self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
 
     def execute_tip(self, process: RunningProcess):
         for _ in range(self.scheduler.tip):
@@ -40,6 +44,7 @@ class RoundRobin(PolicyStrategy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+            self.logger.log_process_state(self.time_unit, f"Executing TIP for Process {process.id}")
 
     def execute_tfp(self, process: RunningProcess):
         for _ in range(self.scheduler.tfp):
@@ -48,6 +53,7 @@ class RoundRobin(PolicyStrategy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+            self.logger.log_process_state(self.time_unit, f"Executing TFP for Process {process.id}")
 
     def execute_process(self, process: RunningProcess):
         if process.pending_cpu_burst_in_execution > 0:
@@ -59,9 +65,12 @@ class RoundRobin(PolicyStrategy):
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
+            self.logger.log_process_state(self.time_unit, f"Executing CPU burst for Process {process.id}")
 
             if self.quantum_counter % self.scheduler.quantum == 0:
-                self.ready_queue.append(self.ready_queue.pop(0))
+                moved_process = self.ready_queue.pop(0)
+                self.ready_queue.append(moved_process)
+                self.logger.log_process_state(self.time_unit, f"Process {moved_process.id} moved to end of Ready Queue (Quantum expired)")
             self.quantum_counter += 1
 
         if process.pending_cpu_burst_in_execution == 0:
@@ -71,19 +80,22 @@ class RoundRobin(PolicyStrategy):
                 self.io_blocked_queue.append(process)
                 self.ready_queue.pop(0)
                 self.quantum_counter = 1
+                self.logger.log_process_state(self.time_unit, f"Process {process.id} moved to I/O Blocked Queue")
             elif process.cpu_burst_count == 0:
                 self.execute_tfp(process)
                 self.finish_process(process)
 
     def finish_process(self, process: RunningProcess):
-        self.result.finished_processes.append(FinishedProcess(
+        finished_process = FinishedProcess(
             **process.__dict__,
             return_instant=self.time_unit,
             return_time=self.time_unit - process.arrival_time,
             normalized_return_time=(self.time_unit - process.arrival_time) / process.service_time
-        ))
+        )
+        self.result.finished_processes.append(finished_process)
         self.ready_queue.pop(0)
         self.quantum_counter = 1
+        self.logger.log_process_state(self.time_unit, f"Process {process.id} finished")
 
     def execute(self) -> SchedulerResult:
         while len(self.result.finished_processes) < len(self.scheduler.processes):
@@ -93,6 +105,7 @@ class RoundRobin(PolicyStrategy):
                 self.advance_time_unit()
                 self.update_io_blocked_queue()
                 self.update_ready_queue()
+                self.logger.log_process_state(self.time_unit, "CPU Idle")
             else:
                 current_process = self.ready_queue[0]
                 if self.last_executed_process_id != current_process.id and self.last_executed_process_id != -1 and current_process.tip_already_executed:

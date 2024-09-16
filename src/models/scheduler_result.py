@@ -12,10 +12,9 @@ class SchedulerResult:
     os_cpu_time: int
 
     def __str__(self) -> str:
-        return f"""Resumen:
-  Número de Estados del Sistema: {len(self.state_history)}
-  Número de Procesos Finalizados: {len(self.finished_processes)}
-  Tiempo de Retorno del Lote: {self.batch_return_time}
-  Tiempo Promedio de Retorno del Lote: {self.average_batch_return_time:.2f}
-  Tiempo de CPU Inactivo: {self.idle_cpu_time}
-  Tiempo de CPU del SO: {self.os_cpu_time}"""
+        return f"""  * Número de Estados del Sistema: {len(self.state_history)}
+  * Número de Procesos Finalizados: {len(self.finished_processes)}
+  * Tiempo de Retorno del Lote: {self.batch_return_time}
+  * Tiempo Promedio de Retorno del Lote: {self.average_batch_return_time:.2f}
+  * Tiempo de CPU Inactivo: {self.idle_cpu_time}
+  * Tiempo de CPU del SO: {self.os_cpu_time}"""

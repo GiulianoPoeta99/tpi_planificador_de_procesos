@@ -3,6 +3,7 @@ import csv
 from models import ProcessScheduler, Process
 from services import FCFS, RoundRobin, ExternalPriority, SPN, SRTN
 from enums import Policy
+from tools import CustomLogger
 
 class Scheduler:
     def __init__(self):
@@ -13,6 +14,7 @@ class Scheduler:
             Policy.SPN: SPN,
             Policy.SRTN: SRTN,
         }
+        self.logger = None
 
     @staticmethod
     def __load_processes_from_file(file_path: str) -> List[Process]:
@@ -46,14 +48,19 @@ class Scheduler:
         processes = self.__load_processes_from_file('src/data/processes.txt')
         process_scheduler = ProcessScheduler(policy, processes, tip, tfp, tcp, quantum)
 
+        self.logger = CustomLogger(policy.value)
+        self.logger.log_parameters(process_scheduler)
+
         policy = process_scheduler.policy
         if policy not in self.executors:
             raise ValueError(f'Error en política seleccionada: {policy.value} - Falta implementación')
 
-        executor = self.executors[policy]
-        executor_process = executor(process_scheduler)
+        executor = self.executors[policy](process_scheduler, self.logger)
+        result = executor.execute()
         
+        self.logger.log_summary(result)
+
         print('\n')
-        print('===========================Resultado===============================')
-        print(executor_process.execute())
+        print('===========================Resultado===============================\n')
+        print(result)
         print('\n===================================================================')

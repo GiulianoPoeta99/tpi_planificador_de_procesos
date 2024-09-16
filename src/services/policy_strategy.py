@@ -2,10 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List
 from models import ProcessScheduler, SchedulerResult, RunningProcess
 from system import System
+from tools import CustomLogger
 
 class PolicyStrategy(ABC):
-    def __init__(self, scheduler: ProcessScheduler):
+    def __init__(self, scheduler: ProcessScheduler, logger: CustomLogger):
         self.scheduler = scheduler
+        self.logger = logger
 
         self.time_unit = 0
         self.ready_queue: List[RunningProcess] = []
@@ -32,6 +34,7 @@ class PolicyStrategy(ABC):
             process = self.io_blocked_queue[processes_reviewed]
             if process.pending_io_burst_in_execution > 0:
                 self.system_executor.execute_io_tick(process, self.time_unit)
+                self.logger.log_process_state(self.time_unit, f"Process {process.id} executing I/O")
 
             if process.pending_io_burst_in_execution == 0:
                 if process.io_burst_count > 0:
@@ -40,6 +43,7 @@ class PolicyStrategy(ABC):
 
                 self.ready_queue.append(process)
                 self.io_blocked_queue.pop(processes_reviewed)
+                self.logger.log_process_state(self.time_unit, f"Process {process.id} moved from I/O to Ready Queue")
             else:
                 processes_reviewed += 1
 
