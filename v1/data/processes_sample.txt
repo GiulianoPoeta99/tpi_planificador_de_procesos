@@ -1,1 +1,0 @@
-nombre,tiempo_llegada,num_rafagas_cpu,duracion_rafaga_cpu,duracion_rafaga_io,prioridad
