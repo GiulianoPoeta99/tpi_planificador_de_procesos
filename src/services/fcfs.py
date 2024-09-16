@@ -1,8 +1,8 @@
 from typing import List
 from models import RunningProcess, FinishedProcess, SchedulerResult
-from .base import BasePolicy
+from .policy_strategy import PolicyStrategy
 
-class FCFS(BasePolicy):
+class FCFS(PolicyStrategy):
     def update_ready_queue(self):
         for process in self.scheduler.processes:
             if process.arrival_time == self.time_unit:

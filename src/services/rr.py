@@ -1,7 +1,7 @@
 from models import ProcessScheduler, RunningProcess, FinishedProcess, SchedulerResult
-from .base import BasePolicy
+from .policy_strategy import PolicyStrategy
 
-class RoundRobin(BasePolicy):
+class RoundRobin(PolicyStrategy):
     def __init__(self, scheduler: ProcessScheduler):
         super().__init__(scheduler)
         self.quantum_counter = 1

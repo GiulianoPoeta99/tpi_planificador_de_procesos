@@ -3,7 +3,7 @@ from typing import List
 from models import ProcessScheduler, SchedulerResult, RunningProcess
 from system import System
 
-class BasePolicy(ABC):
+class PolicyStrategy(ABC):
     def __init__(self, scheduler: ProcessScheduler):
         self.scheduler = scheduler
 
