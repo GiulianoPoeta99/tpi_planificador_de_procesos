@@ -31,7 +31,7 @@ class CustomLogger:
 
     def _create_log_directory(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_dir = os.path.join('src/logs', f"{timestamp}_{self.policy_name_format}")
+        log_dir = os.path.join('logs', f"{timestamp}_{self.policy_name_format}")
         os.makedirs(log_dir, exist_ok=True)
         return log_dir
 

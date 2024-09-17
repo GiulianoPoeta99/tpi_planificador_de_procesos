@@ -7,7 +7,7 @@ from tools import CustomLogger
 
 class Scheduler:
     def __init__(self):
-        self.executors = {
+        self.policies = {
             Policy.FCFS: FCFS,
             Policy.RR: RoundRobin,
             Policy.EP: ExternalPriority,
@@ -23,7 +23,7 @@ class Scheduler:
             with open(file_path, mode='r') as file:
                 reader = csv.reader(file)
                 for row in reader:
-                    if len(row) != 8:
+                    if len(row) != 7:
                         print(f"Error: La fila {row} no tiene el formato esperado.")
                         continue
 
@@ -33,9 +33,9 @@ class Scheduler:
                         arrival_time=int(row[2]),
                         cpu_burst_count=int(row[3]),
                         cpu_burst_duration=int(row[4]),
-                        io_burst_count=int(row[5]),
-                        io_burst_duration=int(row[6]),
-                        priority=int(row[7])
+                        io_burst_count=int(row[3]),
+                        io_burst_duration=int(row[5]),
+                        priority=int(row[6])
                     )
                     processes.append(process)
         except FileNotFoundError:
@@ -45,17 +45,17 @@ class Scheduler:
         return processes
 
     def execute_scheduler(self, policy: Policy, tip: int, tfp: int, tcp: int, quantum: int) -> None:
-        processes = self.__load_processes_from_file('src/data/processes.txt')
+        processes = self.__load_processes_from_file('data/processes.txt')
         process_scheduler = ProcessScheduler(policy, processes, tip, tfp, tcp, quantum)
 
         self.logger = CustomLogger(policy.value)
         self.logger.log_parameters(process_scheduler)
 
         policy = process_scheduler.policy
-        if policy not in self.executors:
+        if policy not in self.policies:
             raise ValueError(f'Error en política seleccionada: {policy.value} - Falta implementación')
 
-        executor = self.executors[policy](process_scheduler, self.logger)
+        executor = self.policies[policy](process_scheduler, self.logger)
         result = executor.execute()
         
         self.logger.log_summary(result)
