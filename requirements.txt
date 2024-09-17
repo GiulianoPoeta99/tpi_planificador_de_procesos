@@ -4,8 +4,6 @@ mypy-extensions==1.0.0
 packaging==24.1
 prompt-toolkit==3.0.36
 Pygments==2.18.0
-PyInquirer==1.0.3
-pyinstaller==6.10.0
 pyinstaller-hooks-contrib==2024.8
 questionary==2.0.1
 regex==2024.7.24

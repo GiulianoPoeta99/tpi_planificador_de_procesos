@@ -1,0 +1,12 @@
+name: tpi_sistemas_operativos_poeta_giuliano
+services: 
+  app:
+    container_name: planificador_procesos
+    build: 
+      context: . 
+      target: final
+      dockerfile: ./docker/Dockerfile
+    restart: no
+    volumes:
+      - ./data:/app/data:rw
+      - ./logs:/app/logs:rw
