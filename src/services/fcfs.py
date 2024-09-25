@@ -27,14 +27,11 @@ class FCFS(PolicyStrategy):
                 ))
                 self.logger.log_process_state(self.time_unit, f"Process {process.id} arrived and added to Ready Queue")
 
-    def execute_context_switch(self, process: RunningProcess):
-        for _ in range(self.scheduler.tcp):
-            self.system_executor.execute_tcp_tick(process, self.time_unit)
-            self.result.os_cpu_time += 1
-            self.advance_time_unit()
-            self.update_io_blocked_queue()
-            self.update_ready_queue()
-            self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
+    def execute_tcp(self, process: RunningProcess):
+        self.system_executor.execute_tcp_tick(process, self.time_unit)
+        self.result.os_cpu_time += 1
+        self.advance_time_unit()
+        self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
 
     def execute_tip(self, process: RunningProcess):
         for _ in range(self.scheduler.tip):
@@ -73,6 +70,7 @@ class FCFS(PolicyStrategy):
                 self.io_blocked_queue.append(process)
                 self.ready_queue.pop(0)
                 self.logger.log_process_state(self.time_unit, f"Process {process.id} moved to I/O Blocked Queue")
+                self.execute_tcp(process)
             elif process.cpu_burst_count == 0:
                 self.execute_tfp(process)
                 self.finish_process(process)
@@ -98,10 +96,7 @@ class FCFS(PolicyStrategy):
                 self.logger.log_process_state(self.time_unit, "CPU Idle")
             else:
                 current_process = self.ready_queue[0]
-                if self.last_executed_process_id != current_process.id and self.last_executed_process_id != -1 and current_process.tip_already_executed:
-                    self.execute_context_switch(current_process)
-                    self.last_executed_process_id = current_process.id
-                elif self.last_executed_process_id != current_process.id and not current_process.tip_already_executed:
+                if self.last_executed_process_id != current_process.id and not current_process.tip_already_executed:
                     self.execute_tip(current_process)
                     current_process.tip_already_executed = True
                     self.last_executed_process_id = current_process.id

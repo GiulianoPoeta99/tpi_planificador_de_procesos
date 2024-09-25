@@ -26,6 +26,7 @@ class PolicyStrategy(ABC):
         self.update_ready_queue()
 
     def advance_time_unit(self):
+        self.logger.log_ws()
         self.time_unit += 1
 
     def update_io_blocked_queue(self):

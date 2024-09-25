@@ -43,3 +43,6 @@ class CustomLogger:
 
     def log_process_state(self, time_unit, process_info):
         self.processes_logger.debug(f"Time Unit: {time_unit}, Process: {process_info}")
+
+    def log_ws(self):
+        self.processes_logger.debug("")
