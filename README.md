@@ -1,5 +1,7 @@
 # tpi_planificador_de_procesos
 
+Este es un simulador de como funciona las politicas de planificacion de procesos por parte de un procesador. Al ser un simulador esto no funciona exactamente igual que en la vida real.
+
 ## Dependencias
 
 - Docker
