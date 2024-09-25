@@ -8,5 +8,6 @@ services:
       dockerfile: ./docker/Dockerfile
     restart: no
     volumes:
+      - ./src:/app/src:rw
       - ./data:/app/data:rw
       - ./logs:/app/logs:rw
