@@ -18,4 +18,4 @@ class ProcessScheduler:
   * TIP: {self.tip}
   * TFP: {self.tfp}
   * TCP: {self.tcp}
-  * {f'Quantum: {self.quantum}' if self.quantum != None else ''}"""
+  {f'* Quantum: {self.quantum}' if self.quantum != None else ''}"""
