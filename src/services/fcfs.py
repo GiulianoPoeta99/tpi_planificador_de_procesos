@@ -33,10 +33,8 @@ class FCFS(PolicyStrategy):
             self.result.os_cpu_time += 1
             self.advance_time_unit()
             self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
+            self.update_io_blocked_queue()
             self.update_ready_queue()
-        self.advance_time_unit()
-        self.update_io_blocked_queue()
-        self.update_ready_queue()
 
     def execute_tip(self, process: RunningProcess):
         for _ in range(self.scheduler.tip):

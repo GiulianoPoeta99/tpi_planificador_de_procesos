@@ -13,31 +13,40 @@ def get_user_input():
     ).ask()
 
     tip = questionary.text(
-        "Ingrese el Tiempo Inicial del Proceso (TIP):",
-        validate=lambda val: val.isdigit() or "Por favor ingrese un número"
-    ).ask()
-
-    tfp = questionary.text(
-        "Ingrese el Tiempo Final del Proceso (TFP):",
+        "Ingrese el TIP:",
         validate=lambda val: val.isdigit() or "Por favor ingrese un número"
     ).ask()
 
     tcp = questionary.text(
-        "Ingrese el Tiempo de Creación del Proceso (TCP):",
+        "Ingrese el TCP:",
         validate=lambda val: val.isdigit() or "Por favor ingrese un número"
     ).ask()
 
-    quantum = questionary.text(
-        "Ingrese el Quantum (para Round Robin):",
+    tfp = questionary.text(
+        "Ingrese el TFP:",
         validate=lambda val: val.isdigit() or "Por favor ingrese un número"
     ).ask()
+
+    quantum = None
+    if policy == Policy.RR.value:
+        def validate_quantum(val):
+            if not val.isdigit():
+                return "Por favor ingrese un número"
+            if int(val) <= int(tcp):
+                return f"El Quantum debe ser mayor que el TCP ({tcp})"
+            return True
+
+        quantum = questionary.text(
+            "Ingrese el Quantum (para Round Robin):",
+            validate=validate_quantum
+        ).ask()
 
     return {
         'policy': policy,
         'tip': int(tip),
-        'tfp': int(tfp),
         'tcp': int(tcp),
-        'quantum': int(quantum)
+        'tfp': int(tfp),
+        'quantum': int(quantum) if quantum is not None else None
     }
 
 def main():
@@ -50,8 +59,8 @@ def main():
     
     policy = next(p for p in Policy if p.value == answers['policy'])
     tip = answers['tip']
-    tfp = answers['tfp']
     tcp = answers['tcp']
+    tfp = answers['tfp']
     quantum = answers['quantum']
     
     scheduler = Scheduler()
