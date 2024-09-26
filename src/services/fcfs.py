@@ -28,10 +28,15 @@ class FCFS(PolicyStrategy):
                 self.logger.log_process_state(self.time_unit, f"Process {process.id} arrived and added to Ready Queue")
 
     def execute_tcp(self, process: RunningProcess):
-        self.system_executor.execute_tcp_tick(process, self.time_unit)
-        self.result.os_cpu_time += 1
+        for _ in range(self.scheduler.tcp):
+            self.system_executor.execute_tcp_tick(process, self.time_unit)
+            self.result.os_cpu_time += 1
+            self.advance_time_unit()
+            self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
+            self.update_ready_queue()
         self.advance_time_unit()
-        self.logger.log_process_state(self.time_unit, f"Executing TCP for Process {process.id}")
+        self.update_io_blocked_queue()
+        self.update_ready_queue()
 
     def execute_tip(self, process: RunningProcess):
         for _ in range(self.scheduler.tip):
@@ -67,10 +72,10 @@ class FCFS(PolicyStrategy):
             if process.cpu_burst_count > 0:
                 process.cpu_burst_count -= 1
                 process.pending_cpu_burst_in_execution = process.cpu_burst_duration
+                self.execute_tcp(process)
                 self.io_blocked_queue.append(process)
                 self.ready_queue.pop(0)
                 self.logger.log_process_state(self.time_unit, f"Process {process.id} moved to I/O Blocked Queue")
-                self.execute_tcp(process)
             elif process.cpu_burst_count == 0:
                 self.execute_tfp(process)
                 self.finish_process(process)
