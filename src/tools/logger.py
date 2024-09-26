@@ -41,11 +41,11 @@ class CustomLogger:
     def log_summary(self, result):
         self.summary_logger.info(f"Summary:\n{str(result)}")
 
-    def log_process_state(self, time_unit, process_info):
-        self.processes_logger.debug(f"Time Unit: {time_unit}, Process: {process_info}")
+    def info(self, time, status, info):
+        self.processes_logger.debug(f"[INFO] Time: {time}, Status: {status}, {info}")
 
-    def debug(self, bug):
-        self.processes_logger.debug(f"DEBUG: {bug}")
+    def debug(self, time, info):
+        self.processes_logger.debug(f"[DEBUG] Time: {time}, DEBUG: {info}")
 
     def log_ws(self):
         self.processes_logger.debug("")
