@@ -105,13 +105,7 @@ class ExternalPriority(PolicyStrategy):
 				if (
 					process != self.last_executed_process and 
 					self.last_executed_process != None and 
-					(
-						self.last_executed_process.burst_in_execution or (
-							not self.last_executed_process.burst_in_execution and 
-							self.last_executed_process.tip_already_executed and
-							not self.last_executed_process.burst_in_execution_finish
-						)
-					)
+					self.last_executed_process.burst_in_execution 
 				):
 					# ejecutamos el tcp porque se interrumpio el proceso anterior
 					for _ in range(self.scheduler.tcp):

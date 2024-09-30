@@ -12,28 +12,42 @@ def get_user_input():
         choices=[policy.value for policy in Policy]
     ).ask()
 
+    def validate_positive_integer(val):
+        if not val.isdigit():
+            return "Por favor ingrese un número entero positivo"
+        if int(val) <= 0:
+            return "El valor debe ser mayor que 0"
+        return True
+
     tip = questionary.text(
         "Ingrese el TIP:",
-        validate=lambda val: val.isdigit() or "Por favor ingrese un número"
+        validate=validate_positive_integer
     ).ask()
 
     tcp = questionary.text(
         "Ingrese el TCP:",
-        validate=lambda val: val.isdigit() or "Por favor ingrese un número"
+        validate=validate_positive_integer
     ).ask()
 
     tfp = questionary.text(
         "Ingrese el TFP:",
-        validate=lambda val: val.isdigit() or "Por favor ingrese un número"
+        validate=validate_positive_integer
     ).ask()
 
     quantum = None
     if policy == Policy.RR.value:
         def validate_quantum(val):
             if not val.isdigit():
-                return "Por favor ingrese un número"
-            if int(val) <= int(tcp):
+                return "Por favor ingrese un número entero positivo"
+            quantum_value = int(val)
+            if quantum_value <= 0:
+                return "El Quantum debe ser mayor que 0"
+            if quantum_value <= int(tip):
+                return f"El Quantum debe ser mayor que el TIP ({tip})"
+            if quantum_value <= int(tcp):
                 return f"El Quantum debe ser mayor que el TCP ({tcp})"
+            if quantum_value <= int(tfp):
+                return f"El Quantum debe ser mayor que el TFP ({tfp})"
             return True
 
         quantum = questionary.text(
