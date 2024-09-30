@@ -42,10 +42,10 @@ class CustomLogger:
         self.summary_logger.info(f"Summary:\n{str(result)}")
 
     def info(self, time, status, info):
-        self.processes_logger.debug(f"[INFO] Time: {time}, Status: {status}, {info}")
+        self.processes_logger.debug(f"[INFO] Time interval: [{time - 1 }, {time}], Status: {status}, {info}")
 
     def debug(self, time, info):
-        self.processes_logger.debug(f"[DEBUG] Time: {time}, DEBUG: {info}")
+        self.processes_logger.debug(f"[DEBUG] Time interval: [{time - 1 }, {time}], Message: {info}")
 
     def log_ws(self):
         self.processes_logger.debug("")
