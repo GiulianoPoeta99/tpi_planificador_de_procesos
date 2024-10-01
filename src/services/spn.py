@@ -138,8 +138,8 @@ class SPN(PolicyStrategy):
 						process.tip_already_executed = True
 						# cambiamos el id del ultimo proceso ejeutado
 						self.last_executed_process = process
-						# ordenamos la cola de listos
-						self.sort_ready_queue()
+						# # ordenamos la cola de listos
+						# self.sort_ready_queue()
 					else:
 						# preguntamos si le quedan rafagas pendientes al proceso actual
 						if process.pending_cpu_burst_in_execution > 0:
@@ -159,6 +159,8 @@ class SPN(PolicyStrategy):
 							self.update_io_blocked_queue()
 							# revisamos que no hayan procesos nuevos
 							self.update_ready_queue()
+							# # ordenamos la cola de listos
+							# self.sort_ready_queue()
 
 						# pregunamos si ya no le queda mas ejecucion de la rafaga actual
 						if process.pending_cpu_burst_in_execution == 0:
@@ -212,6 +214,8 @@ class SPN(PolicyStrategy):
 								# lo sacamos de la cola de listos
 								self.ready_queue.remove(process)
 								self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) finished")
+								# ordenamos la cola de listos
+								self.sort_ready_queue()
 						
 
 		# una vez que termina la simulacion ordenamos la lista de finalizados por el pid y agregamso varios parametros para el resultado final de la misma
