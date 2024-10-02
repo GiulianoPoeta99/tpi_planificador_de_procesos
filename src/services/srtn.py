@@ -43,7 +43,7 @@ class SRTN(PolicyStrategy):
 			if process.pending_io_burst_in_execution > 0:
 				# ejecucion de sistema para resumen
 				self.system_executor.execute_io_tick(process, self.time_unit)
-				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) executing I/O")
+				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) is executing I/O")
 
 			# si ya no tiene rafagas lo movemos a la cola de listos
 			if process.pending_io_burst_in_execution == 0:
@@ -53,7 +53,7 @@ class SRTN(PolicyStrategy):
 				process.burst_in_execution_finish = False
 				self.ready_queue.append(process)
 				self.io_blocked_queue.pop(processes_reviewed)
-				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) moved from I/O to Ready Queue")
+				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) was moved from I/O to Ready Queue")
 			else:
 				processes_reviewed += 1
 
@@ -115,7 +115,7 @@ class SRTN(PolicyStrategy):
 								self.result.os_cpu_time += 1
 								# avanzamos el tiempo de la simulacion
 								self.advance_time_unit()
-								self.logger.info(self.time_unit, 'RUNNING', f"Process '{ready_process.name}' (pid: {ready_process.id}) executing TIP")
+								self.logger.info(self.time_unit, 'RUNNING', f"Process '{ready_process.name}' (pid: {ready_process.id}) is executing TIP")
 								# actualizamos la cola de bloqueadaos para que se ejecute el io y se muevan a la cola de listos
 								self.update_io_blocked_queue()
 								# revisamos que no hayan aprecido nuevos procesos
@@ -141,7 +141,7 @@ class SRTN(PolicyStrategy):
 							self.result.os_cpu_time += 1
 							# avanzamos el tiempo de la simulacion
 							self.advance_time_unit()
-							self.logger.info(self.time_unit, 'RUNNING', f"Process '{self.last_executed_process.name}' (pid: {self.last_executed_process.id}) executing TCP")
+							self.logger.info(self.time_unit, 'RUNNING', f"Process '{self.last_executed_process.name}' (pid: {self.last_executed_process.id}) is executing TCP")
 							# actualizamos los bloqueados ejecutando y moviendolos a listo
 							self.update_io_blocked_queue()
 							# revisamos que no hayan procesos nuevos
@@ -163,7 +163,7 @@ class SRTN(PolicyStrategy):
 							self.last_executed_process = process
 							# avanzamos el tiempo de la simulacion
 							self.advance_time_unit()
-							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing CPU burst")
+							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing CPU burst")
 							# actualizamos los bloqueados ejecutando y moviendolos
 							self.update_io_blocked_queue()
 							# revisamos que no hayan procesos nuevos
@@ -186,7 +186,7 @@ class SRTN(PolicyStrategy):
 									self.result.os_cpu_time += 1
 									# avanzamos el tiempo de la simulacion
 									self.advance_time_unit()
-									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing TCP")
+									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TCP")
 									# actualizamos los bloqueados ejecutando y moviendolos a listo
 									self.update_io_blocked_queue()
 									# revisamos que no hayan procesos nuevos
@@ -195,7 +195,7 @@ class SRTN(PolicyStrategy):
 								self.io_blocked_queue.append(process)
 								# y sacamos el proceso de la cola
 								self.ready_queue.remove(process)
-								self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) moved to I/O Blocked Queue")
+								self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) was moved to I/O Blocked Queue")
 								# ordenamos la cola de listos
 								self.sort_ready_queue()
 							elif process.cpu_burst_count == 0:
@@ -208,7 +208,7 @@ class SRTN(PolicyStrategy):
 									self.result.os_cpu_time += 1
 									# avanzamos el tiempo de la simulacion
 									self.advance_time_unit()
-									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing TFP")
+									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TFP")
 									# actualizamos los bloqueados ejecutando y moviendolos a listo
 									self.update_io_blocked_queue()
 									# revisamos que no hayan procesos nuevos
@@ -222,7 +222,7 @@ class SRTN(PolicyStrategy):
 								))
 								# lo sacamos de la cola de listos
 								self.ready_queue.remove(process)
-								self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) finished")
+								self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) has finished")
 								# ordenamos la cola de listos
 								self.sort_ready_queue()
 						

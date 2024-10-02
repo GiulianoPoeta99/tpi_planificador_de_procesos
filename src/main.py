@@ -51,7 +51,7 @@ def get_user_input():
             return True
 
         quantum = questionary.text(
-            "Ingrese el Quantum (para Round Robin):",
+            "Ingrese el Quantum:",
             validate=validate_quantum
         ).ask()
 

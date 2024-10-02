@@ -22,20 +22,21 @@ class Scheduler:
         try:
             with open(file_path, mode='r') as file:
                 reader = csv.reader(file)
+                pid = 0
                 for row in reader:
-                    if len(row) != 7:
+                    if len(row) != 6:
                         print(f"Error: La fila {row} no tiene el formato esperado.")
                         continue
-
+                    pid += 1
                     process = Process(
-                        id=int(row[0]),
-                        name=row[1],
-                        arrival_time=int(row[2]),
-                        cpu_burst_count=int(row[3]),
-                        cpu_burst_duration=int(row[4]),
-                        io_burst_count=int(row[3]),
-                        io_burst_duration=int(row[5]),
-                        priority=int(row[6])
+                        id=pid,
+                        name=row[0],
+                        arrival_time=int(row[1]),
+                        cpu_burst_count=int(row[2]),
+                        cpu_burst_duration=int(row[3]),
+                        io_burst_count=int(row[2]),
+                        io_burst_duration=int(row[4]),
+                        priority=int(row[5])
                     )
                     processes.append(process)
         except FileNotFoundError:

@@ -38,7 +38,7 @@ class FCFS(PolicyStrategy):
 			if process.pending_io_burst_in_execution > 0:
 				# ejecucion de sistema para resumen
 				self.system_executor.execute_io_tick(process, self.time_unit)
-				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) executing I/O")
+				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) is executing I/O")
 
 			# si ya no tiene rafagas lo movemos a la cola de listos
 			if process.pending_io_burst_in_execution == 0:
@@ -48,7 +48,7 @@ class FCFS(PolicyStrategy):
 				process.burst_in_execution_finish = False
 				self.ready_queue.append(process)
 				self.io_blocked_queue.pop(processes_reviewed)
-				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) moved from I/O to Ready Queue")
+				self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) was moved from I/O to Ready Queue")
 			else:
 				processes_reviewed += 1
 
@@ -73,7 +73,7 @@ class FCFS(PolicyStrategy):
 					cpu_burst_count=process.cpu_burst_count - 1 if process.cpu_burst_count > 0 else 0,
 					io_burst_count=process.io_burst_count
 				))
-				self.logger.info(self.time_unit, 'READY', f"Process '{process.name}' (pid: {process.id}) arrived and added to Ready Queue")
+				self.logger.info(self.time_unit, 'READY', f"Process '{process.name}' (pid: {process.id}) has arrived and added to Ready Queue")
 
 	def execute(self):
 		# ejecutar la simulacion hasta que los procesos finalizados sean iguales a los procesoso totales
@@ -105,7 +105,7 @@ class FCFS(PolicyStrategy):
 						self.result.os_cpu_time += 1
 						# avanzamos el tiempo de la simulacion
 						self.advance_time_unit()
-						self.logger.info(self.time_unit, 'RUNNING', f"Process '{self.last_executed_process.name}' (pid: {self.last_executed_process.id}) executing TCP")
+						self.logger.info(self.time_unit, 'RUNNING', f"Process '{self.last_executed_process.name}' (pid: {self.last_executed_process.id}) is executing TCP")
 						# actualizamos los bloqueados ejecutando y moviendolos a listo
 						self.update_io_blocked_queue()
 						# revisamos que no hayan procesos nuevos
@@ -123,7 +123,7 @@ class FCFS(PolicyStrategy):
 							self.result.os_cpu_time += 1
 							# avanzamos el tiempo de la simulacion
 							self.advance_time_unit()
-							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing TIP")
+							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TIP")
 							# actualizamos la cola de bloqueadaos para que se ejecute el io y se muevan a la cola de listos
 							self.update_io_blocked_queue()
 							# revisamos que no hayan aprecido nuevos procesos
@@ -146,7 +146,7 @@ class FCFS(PolicyStrategy):
 							self.last_executed_process = process
 							# avanzamos el tiempo de la simulacion
 							self.advance_time_unit()
-							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing CPU burst")
+							self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing CPU burst")
 							# actualizamos los bloqueados ejecutando y moviendolos
 							self.update_io_blocked_queue()
 							# revisamos que no hayan procesos nuevos
@@ -167,7 +167,7 @@ class FCFS(PolicyStrategy):
 									self.result.os_cpu_time += 1
 									# avanzamos el tiempo de la simulacion
 									self.advance_time_unit()
-									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing TCP")
+									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TCP")
 									# actualizamos los bloqueados ejecutando y moviendolos a listo
 									self.update_io_blocked_queue()
 									# revisamos que no hayan procesos nuevos
@@ -176,7 +176,7 @@ class FCFS(PolicyStrategy):
 								self.io_blocked_queue.append(process)
 								# y sacamos el proceso de la cola
 								self.ready_queue.remove(process)
-								self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) moved to I/O Blocked Queue")
+								self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) was moved to I/O Blocked Queue")
 							elif process.cpu_burst_count == 0:
 								process.burst_in_execution = False
 								process.burst_in_execution_finish = True
@@ -187,7 +187,7 @@ class FCFS(PolicyStrategy):
 									self.result.os_cpu_time += 1
 									# avanzamos el tiempo de la simulacion
 									self.advance_time_unit()
-									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) executing TFP")
+									self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TFP")
 									# actualizamos los bloqueados ejecutando y moviendolos a listo
 									self.update_io_blocked_queue()
 									# revisamos que no hayan procesos nuevos
@@ -201,7 +201,7 @@ class FCFS(PolicyStrategy):
 								))
 								# lo sacamos de la cola de listos
 								self.ready_queue.remove(process)
-								self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) finished")
+								self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) has finished")
 						
 
 		# una vez que termina la simulacion ordenamos la lista de finalizados por el pid y agregamso varios parametros para el resultado final de la misma

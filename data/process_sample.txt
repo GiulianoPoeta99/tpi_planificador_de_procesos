@@ -1,1 +1,1 @@
-id,name,arrival_time,cpu_burst_count,cpu_burst_duration,io_burst_duration,priority
+name,arrival_time,cpu_burst_count,cpu_burst_duration,io_burst_duration,priority
