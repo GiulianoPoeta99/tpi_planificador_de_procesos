@@ -12,7 +12,7 @@ class SPN(PolicyStrategy):
         self.time_unit = 0
         self.ready_queue: List[RunningProcess] = []
         self.io_blocked_queue: List[RunningProcess] = []
-        self.last_executed_process_id = -1
+        self.last_executed_process = None
         self.result = SchedulerResult(
             state_history=[],
             finished_processes=[],
@@ -34,7 +34,6 @@ class SPN(PolicyStrategy):
         self.ready_queue.sort(key=lambda x: x.pending_cpu_burst_in_execution)
         self.logger.info(self.time_unit, '-', f"Ready Queue sorted by remaining time: {[p.id for p in self.ready_queue]}")
 
-
     def update_io_blocked_queue(self):
         processes_reviewed = 0
         while processes_reviewed < len(self.io_blocked_queue):
@@ -48,6 +47,7 @@ class SPN(PolicyStrategy):
                     process.io_burst_count -= 1
                     process.pending_io_burst_in_execution = process.io_burst_duration
 
+                process.recently_moved_to_ready_queue = True
                 self.ready_queue.append(process)
                 self.io_blocked_queue.pop(processes_reviewed)
                 self.logger.info(self.time_unit, 'BLOCKED', f"Process '{process.name}' (pid: {process.id}) was moved from I/O to Ready Queue")
@@ -65,6 +65,7 @@ class SPN(PolicyStrategy):
                     io_burst_duration=process.io_burst_duration,
                     priority=process.priority,
                     tip_already_executed=self.scheduler.tip == 0,
+                    recently_moved_to_ready_queue=True,
                     pending_cpu_burst_in_execution=process.cpu_burst_duration,
                     pending_io_burst_in_execution=process.io_burst_duration,
                     service_time=0,
@@ -83,7 +84,7 @@ class SPN(PolicyStrategy):
             self.update_ready_queue()
             self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) is executing TIP")
 
-    def execute_context_switch(self, process: RunningProcess):
+    def execute_tcp(self, process: RunningProcess):
         for _ in range(self.scheduler.tcp):
             self.system_executor.execute_tcp_tick(process, self.time_unit)
             self.result.os_cpu_time += 1
@@ -107,7 +108,7 @@ class SPN(PolicyStrategy):
             process.service_time += 1
             for i in range(1, len(self.ready_queue)):
                 self.ready_queue[i].ready_wait_time += 1
-            self.last_executed_process_id = process.id
+            self.last_executed_process = process
             self.advance_time_unit()
             self.update_io_blocked_queue()
             self.update_ready_queue()
@@ -118,12 +119,13 @@ class SPN(PolicyStrategy):
                 process.cpu_burst_count -= 1
                 process.pending_cpu_burst_in_execution = process.cpu_burst_duration
                 self.io_blocked_queue.append(process)
-                self.ready_queue.pop(0)
+                self.ready_queue.remove(process)
                 self.logger.info(self.time_unit, 'RUNNING', f"Process '{process.name}' (pid: {process.id}) was moved to I/O Blocked Queue")
             elif process.cpu_burst_count == 0:
                 self.execute_tfp(process)
                 self.finish_process(process)
             self.sort_ready_queue()
+        process.recently_moved_to_ready_queue = False
 
     def finish_process(self, process: RunningProcess):
         self.result.finished_processes.append(FinishedProcess(
@@ -132,7 +134,7 @@ class SPN(PolicyStrategy):
             return_time=self.time_unit - process.arrival_time,
             normalized_return_time=(self.time_unit - process.arrival_time) / process.service_time
         ))
-        self.ready_queue.pop(0)
+        self.ready_queue.remove(process)
         self.logger.info(self.time_unit, 'FINISHED', f"Process '{process.name}' (pid: {process.id}) has finished")
 
     def execute(self) -> SchedulerResult:
@@ -147,14 +149,27 @@ class SPN(PolicyStrategy):
                 self.logger.info(self.time_unit, '-', "CPU Idle")
             else:
                 current_process = self.ready_queue[0]
-                if self.last_executed_process_id != current_process.id and self.last_executed_process_id != -1 and current_process.tip_already_executed:
-                    self.execute_context_switch(current_process)
-                    self.last_executed_process_id = current_process.id
+                if (
+                    (
+                        self.last_executed_process != current_process
+                        and self.last_executed_process is not None 
+                        and current_process.tip_already_executed
+                        and current_process.recently_moved_to_ready_queue
+                    )
+                    or (
+                        self.last_executed_process == current_process
+                        and current_process.recently_moved_to_ready_queue
+                    )
+                ):
+                    self.execute_tcp(current_process)
+                    current_process.recently_moved_to_ready_queue = False
+                    self.last_executed_process = current_process
                     self.sort_ready_queue()
-                elif self.last_executed_process_id != current_process.id and not current_process.tip_already_executed:
+                elif self.last_executed_process != current_process and not current_process.tip_already_executed:
                     self.execute_tip(current_process)
                     current_process.tip_already_executed = True
-                    self.last_executed_process_id = current_process.id
+                    current_process.recently_moved_to_ready_queue = False
+                    self.last_executed_process = current_process
                     self.sort_ready_queue()
                 else:
                     self.execute_process(current_process)
