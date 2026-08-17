@@ -3,7 +3,7 @@ import csv
 from models import ProcessScheduler, Process
 from services import FCFS, RoundRobin, ExternalPriority, SPN, SRTN
 from enums import Policy
-from tools import CustomLogger
+from tools import CustomLogger, SimulationVisualizer
 
 class Scheduler:
     def __init__(self):
@@ -60,8 +60,14 @@ class Scheduler:
         result = executor.execute()
         
         self.logger.log_summary(result)
+        image_path = SimulationVisualizer().generate(
+            process_scheduler,
+            result,
+            self.logger.log_dir,
+        )
 
         print('\n')
         print('===========================Resultado===============================\n')
         print(result)
+        print(f'\n  * Imagen resumen: {image_path}')
         print('\n===================================================================')
